@@ -174,6 +174,7 @@ public class MainActivity extends AppCompatActivity {
         updates.put("estado", newState);
         if (newState.equals("Apagado")) {
             updates.put("tiempoUso", "00:00:00");
+            updates.put("usuario", "Sin usuario"); // Add clearing user
         }
 
         // Path updated to "PC"
@@ -200,6 +201,7 @@ public class MainActivity extends AppCompatActivity {
                     updates.put("estado", newState);
                     if (newState.equals("Apagado")) {
                         updates.put("tiempoUso", "00:00:00");
+                        updates.put("usuario", "Sin usuario"); // Add clearing user
                     }
                     computer.getRef().updateChildren(updates);
                 }
@@ -271,14 +273,59 @@ public class MainActivity extends AppCompatActivity {
         String userId = getSelectedComputer(spinnerUserId); 
 
         if (computerId == null || userId == null) return;
-
-        mDatabase.child("usuarios_registrados").child(userId).addListenerForSingleValueEvent(new ValueEventListener() {
+        
+        // Verificar estado de pc antes de asignar user
+        mDatabase.child("PC").child(computerId).addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if (snapshot.exists()) {
-                    // Path updated to "PC"
-                    mDatabase.child("PC").child(computerId).child("usuario").setValue(userId);
-                    Toast.makeText(MainActivity.this, "Usuario " + userId + " asignado a " + computerId, Toast.LENGTH_SHORT).show();
+                    String estado = snapshot.child("estado").getValue(String.class);
+                    String usuarioActual = snapshot.child("usuario").getValue(String.class);
+                    
+                    // Logica: Computador debe estar Encendido y su valor de usuario debe ser "Sin usuario"
+                    if ("Encendido".equals(estado)) {
+                        if ("Sin usuario".equals(usuarioActual) || usuarioActual == null) {
+                            // verifica usuario y asigna
+                            checkUserAndAssign(computerId, userId);
+                        } else {
+                            Toast.makeText(MainActivity.this, "El computador ya tiene un usuario asignado", Toast.LENGTH_LONG).show();
+                        }
+                    } else {
+                        Toast.makeText(MainActivity.this, "El computador debe estar encendido para asignar usuario", Toast.LENGTH_LONG).show();
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) { }
+        });
+    }
+    
+    private void checkUserAndAssign(String computerId, String userId) {
+        // Primero verificamos que el usuario exista en registros
+        mDatabase.child("usuarios_registrados").child(userId).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot userSnapshot) {
+                if (userSnapshot.exists()) {
+                    // Usuario existe. AHORA verificamos si ya está activo en otro PC.
+                    mDatabase.child("PC").orderByChild("usuario").equalTo(userId).addListenerForSingleValueEvent(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(@NonNull DataSnapshot pcSnapshot) {
+                            if (pcSnapshot.exists() && pcSnapshot.getChildrenCount() > 0) {
+                                // Si la query devuelve resultados, significa que este usuario ya está en algun PC
+                                Toast.makeText(MainActivity.this, "Este usuario ya está activo en otro equipo", Toast.LENGTH_LONG).show();
+                            } else {
+                                // No está en uso, procedemos a asignar
+                                mDatabase.child("PC").child(computerId).child("usuario").setValue(userId);
+                                Toast.makeText(MainActivity.this, "Usuario " + userId + " asignado a " + computerId, Toast.LENGTH_SHORT).show();
+                            }
+                        }
+
+                        @Override
+                        public void onCancelled(@NonNull DatabaseError error) {
+                            Toast.makeText(MainActivity.this, "Error al verificar disponibilidad del usuario", Toast.LENGTH_SHORT).show();
+                        }
+                    });
                 } else {
                     Toast.makeText(MainActivity.this, "Usuario no válido", Toast.LENGTH_SHORT).show();
                 }
