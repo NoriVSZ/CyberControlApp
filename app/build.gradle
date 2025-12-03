@@ -5,14 +5,12 @@ plugins {
 
 android {
     namespace 'com.example.cybercontrolpanel'
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk 34
 
     defaultConfig {
         applicationId "com.example.cybercontrolpanel"
         minSdk 24
-        targetSdk 36
+        targetSdk 34
         versionCode 1
         versionName "1.0"
 
@@ -29,6 +27,13 @@ android {
         sourceCompatibility JavaVersion.VERSION_11
         targetCompatibility JavaVersion.VERSION_11
     }
+
+    packaging {
+        resources {
+            excludes += "META-INF/INDEX.LIST"
+            excludes += "META-INF/io.netty.versions.properties"
+        }
+    }
 }
 
 dependencies {
@@ -37,6 +42,11 @@ dependencies {
     implementation libs.activity
     implementation libs.constraintlayout
     implementation libs.firebase.database
+
+    //HiveMQ MQTT
+    implementation libs.hivemqlib
+    implementation libs.nettylib
+
     testImplementation libs.junit
     androidTestImplementation libs.ext.junit
     androidTestImplementation libs.espresso.core

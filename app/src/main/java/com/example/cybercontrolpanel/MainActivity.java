@@ -4,6 +4,7 @@ import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -31,6 +32,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+// imports de Hivemq
+import com.hivemq.client.mqtt.MqttClient;
+import com.hivemq.client.mqtt.MqttClientState;
+import com.hivemq.client.mqtt.datatypes.MqttQos;
+import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
+
+
+
 public class MainActivity extends AppCompatActivity {
 
     private DatabaseReference mDatabase;
@@ -40,12 +49,20 @@ public class MainActivity extends AppCompatActivity {
     private EditText editAlertMessage;
     
     // Computer List
-    private List<String> computerList = new ArrayList<>();
+    private final List<String> computerList = new ArrayList<>();
     private ArrayAdapter<String> computerAdapter;
 
     // User List
-    private List<String> userList = new ArrayList<>();
+    private final List<String> userList = new ArrayList<>();
     private ArrayAdapter<String> userAdapter;
+
+    // Hivemq configuration (se deben cambiar para ejecutar con tu cluster)
+    private Mqtt3AsyncClient mqttClient;
+    private static final String HIVE_MQ_HOST = "1a1f751b6f90493d8812889ec3a8177b.s1.eu.hivemq.cloud"; // dato aleatorio para subir a github
+    private static final int HIVE_MQ_PORT = 8883; // puerto comun para HiveMQ
+    private static final String HIVE_MQ_USER = "CyberNori"; // dato aleatorio para subir a github
+    private static final String HIVE_MQ_PASS = "Ferronuclear@_05"; // dato aleatorio para subir a github
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,6 +84,9 @@ public class MainActivity extends AppCompatActivity {
         loadComputersFromFirebase();
         loadUsersFromFirebase();
         setupClickListeners();
+
+        // connect to hivemq cloud
+        connectToHiveMQ();
     }
 
     private void initializeViews() {
@@ -164,45 +184,135 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    // --- Logic Methods ---
+    // HiveMQ connection
+    private void connectToHiveMQ() {
+        mqttClient = MqttClient.builder()
+                .useMqttVersion3()
+                .identifier("CyberAdmin_" + System.currentTimeMillis())
+                .serverHost(HIVE_MQ_HOST)
+                .serverPort(HIVE_MQ_PORT)
+                .sslWithDefaultConfig()
+                .buildAsync();
+
+        mqttClient.connectWith()
+                .simpleAuth()
+                .username(HIVE_MQ_USER)
+                .password(HIVE_MQ_PASS.getBytes())
+                .applySimpleAuth()
+                .send()
+                .whenComplete((connAck, throwable) -> {
+                    if (throwable != null) {
+                        Log.e("HiveMQ", "Error al conectar con HiveMQ Cloud", throwable);
+                    } else {
+                        Log.i("HiveMQ", "Conectado a HiveMQ Cloud");
+                    }
+                });
+
+
+    }
+
+    // Send command to HiveMQ
+    private void sendCommandToHiveMQ(String pcId, String action, Map<String, Object> extraData) {
+        if (mqttClient == null || mqttClient.getState() != MqttClientState.CONNECTED) {
+            Toast.makeText(this, "No conectado a HiveMQ", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        StringBuilder payload = new StringBuilder();
+        payload.append("{\"pcId\":\"").append(pcId).append("\",\"action\":\"").append(action).append("\"");
+
+        if (extraData != null && !extraData.isEmpty()) {
+            payload.append(",\"datos\":{");
+            boolean first = true;
+            for (Map.Entry<String, Object> entry : extraData.entrySet()) {
+                if (!first) payload.append(",");
+                payload.append("\"").append(entry.getKey()).append("\":\"").append(entry.getValue()).append("\"");
+                first = false;
+            }
+            payload.append("}");
+        }
+        payload.append("}");
+
+        String topic = "Cyber/comando/" + pcId;
+        mqttClient.publishWith()
+                .topic(topic)
+                .qos(MqttQos.AT_LEAST_ONCE)
+                .payload(payload.toString().getBytes())
+                .send()
+                .whenComplete((result, error) -> {
+                    if (error != null) {
+                        Log.e("HiveMQ", "Error al enviar comando a HiveMQ", error);
+                    } else {
+                        Log.i("HiveMQ", "Comando enviado a HiveMQ");
+                    }
+                });
+    }
+
+    // --- Logic Methods adaptados a hivemq + firebase directo---
 
     private void updateComputerState(String newState) {
         String computerId = getSelectedComputer(spinnerComputerId);
         if (computerId == null) return;
 
+        // 1. Enviar MQTT
+        sendCommandToHiveMQ(computerId, "estado", Map.of("valor", newState));
+
+        // 2. Actualizar Firebase Directamente
         Map<String, Object> updates = new HashMap<>();
         updates.put("estado", newState);
-        if (newState.equals("Apagado")) {
+        
+        if ("Apagado".equals(newState)) {
+            Map<String, Object> resetData = new HashMap<>();
+            resetData.put("usuario", "Sin usuario");
+            resetData.put("tiempoUso", "00:00:00");
+            sendCommandToHiveMQ(computerId, "reset", resetData);
+
+            // Actualizar tambien en Firebase
             updates.put("tiempoUso", "00:00:00");
-            updates.put("usuario", "Sin usuario"); // Add clearing user
+            updates.put("usuario", "Sin usuario");
         }
 
-        // Path updated to "PC"
         mDatabase.child("PC").child(computerId).updateChildren(updates)
-                .addOnSuccessListener(aVoid -> Toast.makeText(this, "Estado actualizado: " + newState, Toast.LENGTH_SHORT).show())
-                .addOnFailureListener(e -> Toast.makeText(this, "Error al actualizar", Toast.LENGTH_SHORT).show());
+            .addOnSuccessListener(aVoid -> Toast.makeText(this, "Estado actualizado (FB+MQTT): " + newState, Toast.LENGTH_SHORT).show())
+            .addOnFailureListener(e -> Toast.makeText(this, "Error al actualizar Firebase", Toast.LENGTH_SHORT).show());
     }
 
     private void updateComputerInternet(String newState) {
         String computerId = getSelectedComputer(spinnerComputerId);
         if (computerId == null) return;
 
-        // Path updated to "PC"
-        mDatabase.child("PC").child(computerId).child("internet").setValue(newState);
+        // 1. Enviar MQTT
+        sendCommandToHiveMQ(computerId, "internet", Map.of("valor", newState));
+
+        // 2. Actualizar Firebase Directamente
+        mDatabase.child("PC").child(computerId).child("internet").setValue(newState)
+             .addOnSuccessListener(aVoid -> Toast.makeText(this, "Internet " + newState + " (FB+MQTT)", Toast.LENGTH_SHORT).show());
     }
 
     private void updateAllComputersState(String newState) {
-        // Path updated to "PC"
         mDatabase.child("PC").addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 for (DataSnapshot computer : snapshot.getChildren()) {
+                    String pcId = computer.getKey();
+                    
+                    // 1. Enviar MQTT
+                    sendCommandToHiveMQ(pcId, "estado", Map.of("valor", newState));
+                    
+                    // 2. Actualizar Firebase
                     Map<String, Object> updates = new HashMap<>();
                     updates.put("estado", newState);
-                    if (newState.equals("Apagado")) {
+
+                    if ("Apagado".equals(newState)) {
+                        Map<String, Object> resetData = new HashMap<>();
+                        resetData.put("usuario", "Sin usuario");
+                        resetData.put("tiempoUso", "00:00:00");
+                        sendCommandToHiveMQ(pcId, "reset", resetData);
+                        
                         updates.put("tiempoUso", "00:00:00");
-                        updates.put("usuario", "Sin usuario"); // Add clearing user
+                        updates.put("usuario", "Sin usuario");
                     }
+                    
                     computer.getRef().updateChildren(updates);
                 }
                 Toast.makeText(MainActivity.this, "Todos los computadores " + newState, Toast.LENGTH_SHORT).show();
@@ -214,11 +324,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateAllComputersInternet(String newState) {
-        // Path updated to "PC"
         mDatabase.child("PC").addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 for (DataSnapshot computer : snapshot.getChildren()) {
+                    String pcId = computer.getKey();
+                    // 1. Enviar MQTT
+                    sendCommandToHiveMQ(pcId, "internet", Map.of("valor", newState));
+                    // 2. Actualizar Firebase
                     computer.getRef().child("internet").setValue(newState);
                 }
                 Toast.makeText(MainActivity.this, "Internet " + newState + " en todos", Toast.LENGTH_SHORT).show();
@@ -350,9 +463,9 @@ public class MainActivity extends AppCompatActivity {
         AlertDialog dialog = builder.create();
         
         btnSave.setOnClickListener(v -> {
-            String id = editId.getText().toString().trim();
-            String name = editName.getText().toString().trim();
-            String email = editEmail.getText().toString().trim();
+            String id = editId.getText() != null ? editId.getText().toString().trim() : "";
+            String name = editName.getText() != null ? editName.getText().toString().trim() : "";
+            String email = editEmail.getText() != null ? editEmail.getText().toString().trim() : "";
 
             if (TextUtils.isEmpty(id) || TextUtils.isEmpty(name)) {
                 Toast.makeText(this, "ID y Nombre son obligatorios", Toast.LENGTH_SHORT).show();
