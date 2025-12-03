@@ -231,6 +231,21 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="8dp"
+                    android:text="Seleccionar Computador"
+                    android:textColor="#333333"
+                    android:textStyle="bold" />
+
+                <Spinner
+                    android:id="@+id/spinnerAlertComputer"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginBottom="16dp"
+                    android:background="@android:drawable/btn_dropdown" />
+                
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
                     android:text="Tipo de Alerta"
                     android:textColor="#333333"
                     android:textStyle="bold" />
@@ -317,44 +332,32 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="8dp"
-                    android:text="ID de Usuario"
+                    android:text="Usuario Registrado"
                     android:textColor="#333333"
                     android:textStyle="bold" />
 
-                <EditText
-                    android:id="@+id/editUserId"
+                <Spinner
+                    android:id="@+id/spinnerUserId"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="48dp"
                     android:layout_marginBottom="16dp"
-                    android:background="#FFFFFF"
-                    android:hint="Ej: USR-001"
-                    android:padding="12dp"
-                    android:textColor="#000000" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    android:text="Nombre de Usuario"
-                    android:textColor="#333333"
-                    android:textStyle="bold" />
-
-                <EditText
-                    android:id="@+id/editUserName"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="16dp"
-                    android:background="#FFFFFF"
-                    android:hint="Ej: Juan Pérez"
-                    android:padding="12dp"
-                    android:textColor="#000000" />
+                    android:background="@android:drawable/btn_dropdown" />
 
                 <Button
                     android:id="@+id/btnAssignUser"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
                     android:backgroundTint="#1a1a2e"
                     android:text="👤 Asignar Usuario"
+                    android:textColor="#FFFFFF" />
+                    
+                <Button
+                    android:id="@+id/btnRegisterUser"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:backgroundTint="#2196F3"
+                    android:text="➕ Registrar Nuevo Usuario"
                     android:textColor="#FFFFFF" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
