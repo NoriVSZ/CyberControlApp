@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "315656768416",
+    "project_id": "cyberumm-fb998",
+    "storage_bucket": "cyberumm-fb998.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:315656768416:android:064566b4584a6698adf2c5",
+        "android_client_info": {
+          "package_name": "com.example.cybercontrolpanel"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCvBb_SS6Dy2cOOTmyW5xqwtFCft79PyM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
