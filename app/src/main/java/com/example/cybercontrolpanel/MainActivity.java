@@ -239,7 +239,9 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        // Path updated to "PC"
+        Toast.makeText(this, "Funcionalidad de alerta pospuesta (Monitor Push)", Toast.LENGTH_SHORT).show();
+
+        /* codigo temporalmente comentado para buscar otro enfoque
         mDatabase.child("PC").child(computerId).child("estado").addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
@@ -254,7 +256,6 @@ public class MainActivity extends AppCompatActivity {
                     Toast.makeText(MainActivity.this, "Alerta enviada a " + computerId, Toast.LENGTH_SHORT).show();
                     editAlertMessage.setText("");
                 } else {
-                    // Fixed Toast.LENGTH_WARNING -> Toast.LENGTH_LONG
                     Toast.makeText(MainActivity.this, "El computador debe estar encendido", Toast.LENGTH_LONG).show();
                 }
             }
@@ -262,6 +263,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onCancelled(@NonNull DatabaseError error) { }
         });
+        */
     }
 
     private void assignUserToComputer() {
