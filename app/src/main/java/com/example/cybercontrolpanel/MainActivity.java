@@ -58,10 +58,10 @@ public class MainActivity extends AppCompatActivity {
 
     // Hivemq configuration (se deben cambiar para ejecutar con tu cluster)
     private Mqtt3AsyncClient mqttClient;
-    private static final String HIVE_MQ_HOST = "1a1f751b6f90493d8812889ec3a8177b.s1.eu.hivemq.cloud"; // dato aleatorio para subir a github
+    private static final String HIVE_MQ_HOST = "tucluster.url"; // dato aleatorio para subir a github
     private static final int HIVE_MQ_PORT = 8883; // puerto comun para HiveMQ
-    private static final String HIVE_MQ_USER = "CyberNori"; // dato aleatorio para subir a github
-    private static final String HIVE_MQ_PASS = "Ferronuclear@_05"; // dato aleatorio para subir a github
+    private static final String HIVE_MQ_USER = "tuuser.cluster"; // dato aleatorio para subir a github
+    private static final String HIVE_MQ_PASS = "tucontraseña.cluster"; // dato aleatorio para subir a github
 
 
     @Override
